@@ -130,7 +130,7 @@ module CollectiveIdea #:nodoc:
           def left_and_rights_valid?
             ## AS clause not supported in Oracle in FROM clause for aliasing table name
             joins("LEFT OUTER JOIN #{quoted_table_name}" +
-                (connection.adapter_name.match(/Oracle/).nil? ?  " AS " : " ") +
+                (ActiveRecord::Base.connection.adapter_name.match(/Oracle/).nil? ?  " AS " : " ") +
                 "parent ON " +
                 "#{quoted_parent_column_full_name} = parent.#{primary_key}").
             where(
@@ -146,7 +146,7 @@ module CollectiveIdea #:nodoc:
 
           def no_duplicates_for_columns?
             scope_string = Array(acts_as_nested_set_options[:scope]).map do |c|
-              connection.quote_column_name(c)
+              ActiveRecord::Base.connection.quote_column_name(c)
             end.push(nil).join(", ")
             [quoted_left_column_full_name, quoted_right_column_full_name].all? do |column|
               # No duplicates
@@ -190,7 +190,7 @@ module CollectiveIdea #:nodoc:
               if acts_as_nested_set_options[:scope]
                 scope = lambda{|node|
                   scope_column_names.inject(""){|str, column_name|
-                    str << "AND #{connection.quote_column_name(column_name)} = #{connection.quote(node.send(column_name.to_sym))} "
+                    str << "AND #{ActiveRecord::Base.connection.quote_column_name(column_name)} = #{ActiveRecord::Base.connection.quote(node.send(column_name.to_sym))} "
                   }
                 }
               end
@@ -511,7 +511,7 @@ module CollectiveIdea #:nodoc:
           options[:conditions] = scopes.inject({}) do |conditions,attr|
             conditions.merge attr => self[attr]
           end unless scopes.empty?
-          self.class.base_class.unscoped.scoped options
+          self.class.base_class.unscoped.all options
         end
 
         def store_new_parent
@@ -552,7 +552,7 @@ module CollectiveIdea #:nodoc:
           begin
             transaction(&block)
           rescue ActiveRecord::StatementInvalid => error
-            raise unless connection.open_transactions.zero?
+            raise unless Connection.connection.open_transactions.zero?
             raise unless error.message =~ /Deadlock found when trying to get lock|Lock wait timeout exceeded/
             raise unless retry_count < 10
             retry_count += 1
@@ -730,23 +730,23 @@ module CollectiveIdea #:nodoc:
         end
 
         def quoted_left_column_name
-          connection.quote_column_name(left_column_name)
+          ActiveRecord::Base.connection.quote_column_name(left_column_name)
         end
 
         def quoted_right_column_name
-          connection.quote_column_name(right_column_name)
+          ActiveRecord::Base.connection.quote_column_name(right_column_name)
         end
 
         def quoted_depth_column_name
-          connection.quote_column_name(depth_column_name)
+          ActiveRecord::Base.connection.quote_column_name(depth_column_name)
         end
 
         def quoted_parent_column_name
-          connection.quote_column_name(parent_column_name)
+          ActiveRecord::Base.connection.quote_column_name(parent_column_name)
         end
 
         def quoted_scope_column_names
-          scope_column_names.collect {|column_name| connection.quote_column_name(column_name) }
+          scope_column_names.collect {|column_name| ActiveRecord::Base.connection.quote_column_name(column_name) }
         end
 
         def quoted_left_column_full_name
