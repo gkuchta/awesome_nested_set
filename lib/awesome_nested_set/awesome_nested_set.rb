@@ -511,7 +511,14 @@ module CollectiveIdea #:nodoc:
           options[:conditions] = scopes.inject({}) do |conditions,attr|
             conditions.merge attr => self[attr]
           end unless scopes.empty?
-          self.class.base_class.unscoped.all options
+          hack = self.class.base_class.unscoped.dup
+          ([:joins, :select, :group, :order, :having, :limit, :offset, :from, :lock, :readonly] & options.keys).each do |option|
+            hack = hack.send(option, options[option])
+          end
+          hack = hack.where(options[:conditions]) if options.has_key?(:conditions)
+          hack = hack.includes(options[:include]) if options.has_key?(:include)
+          hack = hack.extending(options[:extend]) if options.has_key?(:extend)
+          hack
         end
 
         def store_new_parent
